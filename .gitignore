@@ -1,0 +1,9 @@
+*.pyc
+*.pyo
+__pycache__/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# vscode
+.vscode/
