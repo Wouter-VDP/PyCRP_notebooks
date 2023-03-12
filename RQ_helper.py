@@ -18,6 +18,7 @@ class RQ_helper:
         self.RQ_data = RQ_data
         self.event = Event(fs=config.Fs, series=series, ADC2uA=config.ADC2uA)
         self.output_dir = output_dir
+        self.series = series
         self.colormap = plt.cm.tab10 #jet
         print("RQ helper is initialised")
             
@@ -25,7 +26,7 @@ class RQ_helper:
     # Plot 2D variables
     # var: dict with 'name','label','range','bins','norm','log' (optional)
     # config_2d: 'type', 'mask' (optional), 'mask_lab' (optional)
-    def plot_pairs(self, var1, var2, mask_arr, mask_labs, config_2d):
+    def plot_pairs(self, var1, var2, mask_arr, mask_labs, config_2d, savefig=True):
         fig, ax = plt.subplots(figsize=(13,5), ncols=3,
                                constrained_layout=True,
                                gridspec_kw={'width_ratios': [2,2,3]})
@@ -74,9 +75,9 @@ class RQ_helper:
         ax[2].set_xlabel(var1['label'])
         ax[2].set_ylabel(var2['label'])
 
-
-        file_name = var1['name']+"-"+var2['name']
-        fig.savefig(self.output_dir+file_name+".pdf")
+        if savefig:
+            file_name = self.series+"-"+var1['name']+"-"+var2['name']
+            fig.savefig(self.output_dir+file_name+".pdf")
         return fig, ax
 
 
@@ -84,7 +85,7 @@ class RQ_helper:
     def plot_traces(self, mask, mask_lab, 
                     pre_trig=None, post_trig=None, 
                     nsmooth=1, plot_data=0.5, plot_mean=0,
-                    max_nevents=100, fig=None, ax=None):
+                    max_nevents=100, savefig=True, fig=None, ax=None):
         
         if pre_trig == None:
             pre_trig = self.config.POST_TRIG/8
@@ -129,9 +130,10 @@ class RQ_helper:
             ax.grid(alpha=0.2)
             ax.set_xlim(min(time_axis),max(time_axis))
 
-            file_name = re.sub('[^A-Za-z0-9]+', '_', mask_lab)
-            fig.savefig(self.output_dir+file_name+".pdf")
-            fig.show()
+            if savefig:
+                file_name = re.sub('[^A-Za-z0-9]+', '_', mask_lab)
+                fig.savefig(self.output_dir+file_name+".pdf")
+
             return time_axis, traces
         else:
             print("Maximum number of traces per plot exceeded:", num_traces)
@@ -139,11 +141,12 @@ class RQ_helper:
         
 
     # Calculate the pulse rates using an exponential fit and return the fitted rate in Hz
-    def get_pulse_rate(self, mask, mask_lab, duration, nbins=None, nskip=None):
+    def get_pulse_rate(self, mask, mask_lab, duration, nbins=None, nskip=None, savefig=True, fig=None, ax=None):
         num_peaks = sum(mask)
         time_diffs = np.diff(self.RQ_data["trig_loc_total"][mask])/self.config.Fs
 
-        fig,ax = plt.subplots(ncols=1, figsize=(6.2,3),constrained_layout=True)
+        if fig==None or ax==None:
+            fig,ax = plt.subplots(ncols=1, figsize=(6.2,3),constrained_layout=True)
         if nbins==None:
             nbins = int(sum(mask)**(1/3))
         if nskip==None:
@@ -168,6 +171,11 @@ class RQ_helper:
         ax.set_ylim(bottom=0)
         ax.set_title('{} rate: Time constant'.format(mask_lab))
         ax.legend()
+        ax.grid(alpha=0.2)
+
+        if savefig:
+            file_name = re.sub('[^A-Za-z0-9]+', '_', mask_lab)
+            fig.savefig(self.output_dir+file_name+"_rate.pdf")
 
         return abs(p[0])
 
@@ -237,7 +245,8 @@ def plot_var_comparison(source_dict, field, mask, x_range, bins, log_flag=False,
         ax.set_yscale("log")
 
     if save_fig:
-        fig.savefig(join(output_dir, f"{field}_{mask}_hist.pdf"))
-        fig_sub.savefig(join(output_dir, f"{field}_{mask}_hist_bkgd_sub.pdf"))
+        file_name = re.sub('[^A-Za-z0-9]+', '_', f"{field}_{mask}")
+        fig.savefig(join(output_dir, file_name+"_hist.pdf"))
+        fig_sub.savefig(join(output_dir, file_name+"_hist_bkgd_sub.pdf"))
 
     return (fig,ax), (fig_sub,ax_sub)
